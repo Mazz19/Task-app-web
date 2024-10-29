@@ -6,8 +6,101 @@
     <title>To-Do List</title>
     <link rel="stylesheet" href="style.css">
     <!-- Includi Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
+    <script type="module">
+        // Importa i moduli Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        // Configurazione di Firebase
+        const firebaseConfig = {
+  apiKey: "AIzaSyAQBMtln8aJp48U3McYar0e5PqvMlKJt24",
+  authDomain: "to-do-list-73cf2.firebaseapp.com",
+  projectId: "to-do-list-73cf2",
+  storageBucket: "to-do-list-73cf2.appspot.com",
+  messagingSenderId: "49436756077",
+  appId: "1:49436756077:web:3dcdd3ef379a70dba25764"
+};
+
+        // Inizializza Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Funzione per caricare le attività
+        async function loadTodos() {
+            const todoList = document.getElementById('todo-list');
+            todoList.innerHTML = '';
+            const todosCol = collection(db, "todos");
+            const todoSnapshot = await getDocs(todosCol);
+            todoSnapshot.forEach((doc) => {
+                const todo = { id: doc.id, ...doc.data() };
+                addTodoToDOM(todo);
+            });
+        }
+
+        // Aggiunge un'attività al database e aggiorna il DOM
+        window.addTodo = async function() { // Assicurati che sia accessibile globalmente
+            const todoInput = document.getElementById('todo-input');
+            const todoText = todoInput.value.trim();
+            if (todoText === '') return;
+
+            try {
+                const docRef = await addDoc(collection(db, "todos"), {
+                    text: todoText,
+                    completed: false
+                });
+                addTodoToDOM({ id: docRef.id, text: todoText, completed: false });
+                todoInput.value = '';
+            } catch (error) {
+                console.error("Errore durante l'aggiunta dell'attività: ", error);
+            }
+        };
+
+        // Funzione per aggiungere un elemento al DOM
+        function addTodoToDOM(todo) {
+            const todoList = document.getElementById('todo-list');
+            const todoItem = document.createElement('li');
+            todoItem.classList.add('todo-item');
+            if (todo.completed) todoItem.classList.add('completed');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = todo.completed;
+            checkbox.addEventListener('change', () => toggleTodoCompletion(todo.id, checkbox.checked));
+
+            const label = document.createElement('label');
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(todo.text));
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.classList.add('delete-btn');
+            deleteBtn.textContent = 'X';
+            deleteBtn.onclick = () => deleteTodo(todo.id, todoItem);
+
+            todoItem.appendChild(label);
+            todoItem.appendChild(deleteBtn);
+            todoList.appendChild(todoItem);
+        }
+
+        // Aggiorna lo stato di completamento
+        async function toggleTodoCompletion(id, completed) {
+            const todoDoc = doc(db, "todos", id);
+            await updateDoc(todoDoc, {
+                completed: completed
+            });
+        }
+
+        // Elimina un'attività
+        async function deleteTodo(id, todoItem) {
+            const todoDoc = doc(db, "todos", id);
+            await deleteDoc(todoDoc);
+            todoItem.remove();
+        }
+
+        // Carica le attività all'avvio della pagina
+        window.onload = () => {
+            loadTodos();
+        };
+    </script>
 </head>
 <body>
     <div class="todo-container">
@@ -18,6 +111,5 @@
         </div>
         <ul id="todo-list"></ul>
     </div>
-    <script src="script.js"></script>
 </body>
 </html>
